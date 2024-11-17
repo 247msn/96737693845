@@ -9,8 +9,6 @@ import random
 import gzip
 import subprocess
 from io import BytesIO
-import win32service
-import win32serviceutil
 import pywintypes
 
 user_agents = [
