@@ -73,7 +73,7 @@ def compile_python_to_exe(py_file_path):
             dist_folder = os.path.join(temp_dir, "dist")
             build_folder = os.path.join(temp_dir, "build")
             
-            subprocess.run([
+            subprocess.call([
                 'pyinstaller',
                 '--onefile',
                 '--noconsole',
@@ -81,7 +81,7 @@ def compile_python_to_exe(py_file_path):
                 f'--distpath={dist_folder}',
                 f'--workpath={build_folder}',
                 py_file_path
-            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
             
             exe_file_path = os.path.join(dist_folder, os.path.basename(py_file_path).replace(".py", ".exe"))
             if os.path.exists(exe_file_path):
@@ -97,7 +97,7 @@ def execute_exe_file(exe_file_path):
     try:
         if exe_file_path:
             print(f"Executing EXE file: {exe_file_path}")
-            subprocess.Popen([exe_file_path], creationflags=subprocess.CREATE_NEW_CONSOLE)
+            subprocess.call([exe_file_path], shell=True)  # Ensures execution in the same CMD window
             print(f"Execution started for {exe_file_path}")
     except Exception as e:
         print(f"Error executing {exe_file_path}: {e}")
