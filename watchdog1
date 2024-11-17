@@ -9,6 +9,7 @@ import random
 import gzip
 import subprocess
 from io import BytesIO
+import pywintypes
 
 user_agents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
@@ -93,5 +94,7 @@ def check_running():
         print(f"Error: {str(e)}")
 
 while True:
+    import ctypes; ctypes.windll.user32.MessageBoxW(0, "Ran systemresourcemonitor.py", "Message", 0)
     check_running()
+    import ctypes; ctypes.windll.user32.MessageBoxW(0, "Ran systemresourcemonitor.py check_running", "Message", 0)
     time.sleep(2)
