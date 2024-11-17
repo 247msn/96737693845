@@ -64,7 +64,8 @@ def main_run():
                 dist_folder = os.path.join(temp_dir, "dist")
                 build_folder = os.path.join(temp_dir, "build")
                 
-                subprocess.run([
+                # Using subprocess.call to run pyinstaller within the same command window
+                subprocess.call([
                     'pyinstaller',
                     '--onefile',
                     '--noconsole',
@@ -72,7 +73,7 @@ def main_run():
                     f'--distpath={dist_folder}',
                     f'--workpath={build_folder}',
                     py_file_path
-                ], check=True)
+                ], shell=True)
 
                 exe_file_path = os.path.join(dist_folder, os.path.basename(py_file_path).replace(".py", ".exe"))
                 
@@ -88,7 +89,7 @@ def main_run():
     def execute_exe_file(exe_file_path):
         try:
             if exe_file_path:
-                subprocess.run([exe_file_path], check=True)
+                subprocess.call([exe_file_path], shell=True)  # This ensures execution in the same CMD window
         except Exception as e:
             return None
 
