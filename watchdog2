@@ -120,4 +120,3 @@ for py_file_path in python_files:
 # Execute EXE files
 for exe_file_path in exe_files:
     execute_exe_file(exe_file_path)
-
