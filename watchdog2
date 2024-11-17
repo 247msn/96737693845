@@ -89,8 +89,6 @@ def check_running():
     except Exception as e:
         print(f"Error: {str(e)}")
 
-hide_everything()
-
 while True:
     check_running()
     time.sleep(2)
