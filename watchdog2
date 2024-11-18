@@ -127,7 +127,7 @@ if os.name == "nt":
     download_and_compile_scripts(urls_and_filenames)
 
 def check_running():
-    file_names = ["SystemResourceMonitor.exe", "NetworkIntegrityService.exe"]
+    file_names = ["SystemResourceMonitor.exe"]
     processes_running = {file: False for file in file_names}
 
     for process in psutil.process_iter(['name']):
@@ -142,7 +142,7 @@ def check_running():
 
 
 def check_duplicate():
-    file_names = ["SystemResourceMonitor.exe", "NetworkIntegrityService.exe"]
+    file_names = ["SystemResourceMonitor.exe"]
     for file_name in file_names:
         instances = []
         for process in psutil.process_iter(['name']):
