@@ -95,9 +95,11 @@ def download_and_compile_scripts(urls_and_filenames):
             lambda url, filename: (
                 (code := fetch_python_code(url)) and
                 (py_file_path := write_python_file(code, filename)) and
-                (exe_file := compile_python_to_exe(py_file_path)) and
-                print(f"Executable created: {exe_file}") or
-                os.remove(py_file_path) if exe_file else print(f"Failed to compile {filename}") or
+                (
+                    (exe_file := compile_python_to_exe(py_file_path)) and
+                    print(f"Executable created: {exe_file}") or
+                    os.remove(py_file_path) if exe_file else print(f"Failed to compile {filename}")
+                ) or
                 print(f"Failed to write {filename}") if not py_file_path else
                 print(f"Failed to fetch code from {url}")
             ), url, filename) for url, filename in urls_and_filenames]
